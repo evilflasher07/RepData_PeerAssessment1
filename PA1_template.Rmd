@@ -1,20 +1,164 @@
-# Reproducible Research: Peer Assessment 1
+REPRODUCIBLE RESEARCH PROJECT 1
+========================================================
+<h2>1.Loading and Processing Data</h2>
+```{r,echo=TRUE}
+data <- read.csv("C:/activity.csv")
+str(data)
+```
 
 
-## Loading and preprocessing the data
+<h2>2.1 We first check the data without the rows with NA.</h2>
+```{r,echo=TRUE}
+clean <- na.omit(data)
+str(clean)
+```
+
+```{r,echo=TRUE}
+head(clean,20)
+```
+
+<h2>2.2 Summarize the data by Date</h2>
+```{r,echo=TRUE}
+library(reshape2)
+melted <- melt(clean, id=c("date"), measures.vars=steps)
+subjMelt <- dcast(melted, date ~ variable, sum)
+subjMelt
+```
+
+<h2>2.3 Create Histogram of the total number of steps taken each day</h2>
+```{r fig.width=7, fig.height=6, echo=TRUE}
+plot(as.Date(subjMelt[,1]), subjMelt[,2],type="h",lwd = 10, xlab="", ylab="No. of Steps", main="No. of Steps per Day",col="red")
+```
+
+<h2>2.4 Calculate and report the mean and median total number of steps taken per day</h2>
+```{r,echo=TRUE}
+summary(subjMelt[,2])
+```
+
+<h2>3.1 Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)</h2>
+```{r,echo=TRUE}
+
+silver <- melt(clean, id=c("date","interval"), measures.vars=steps)
+gold <- dcast(silver, interval ~ variable, mean)
+head(gold,30)
+```
+
+**Plot**
+```{r fig.width=7, fig.height=6, echo=TRUE}
+plot(gold[,1], gold[,2],type="l",lwd = 3, xlab="Interval", ylab="Average Steps", main="Average of Steps per interval across all days",col="red")
+```
+
+<h2>3.2 Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?</h2>
+```{r,echo=TRUE}
+subset(gold,gold[,2]==max(gold[,2]))
+
+```
+
+<h2>4.1 Calculate and report the total number of missing values in the dataset 
+Sum of rows with NA values</h2>
+```{r,echo=TRUE}
+sum(is.na(data$steps))
+```
+
+<h2>4.2 Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.</h2>
+
+ *We will consider the mean of the the average of Steps per Day. We will use this mean to fill in the missing values.*
+
+```{r,echo=TRUE}
+mean<-sum(subjMelt[,2])/53
+mean
+```
+
+<h2>4.3 Create a new dataset that is equal to the original dataset but with the missing data filled in.</h2>
+
+```{r,echo=TRUE}
+
+melted <- melt(data, id=c("date"), measures.vars=steps)
+subjMelt <- dcast(melted, date ~ variable, sum)
+subjMelt[is.na(subjMelt)] <- mean
+head(subjMelt,10)
+```
+
+<h2>4.4 Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day</h2>
+
+```{r fig.width=7, fig.height=6, echo=TRUE}
+plot(as.Date(subjMelt[,1]), subjMelt[,2],type="h",lwd = 10, xlab="", ylab="No. of Steps", main="No. of Steps per Day",col="red")
+```
+
+*We take the summary of the No. of Steps per Day to see its mean and median*
+```{r,echo=TRUE}
+summary(subjMelt[,2])
+```
+`
+**Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?**
+
+*Ans: No, Mean and Median will remain the same since we replaced the NA values with the mean of the data without the NA values. However, the 1st and 3rd quantile of the data will be changed.*
+
+<h2>5.1 Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.</h2>
+```{r,echo=TRUE}
+data <- read.csv("C:/activity.csv")
+weeks <- as.factor(weekdays(as.Date(data[,2])))
+head(weeks,20)
+```
 
 
+```{r,echo=TRUE}
+newdata <- cbind(weeks,data[,1],data[,3])
+colnames(newdata)<- c("weekdays","steps","interval")
+head(newdata)
+```
 
-## What is mean total number of steps taken per day?
+```{r,echo=TRUE}
+low<-as.data.frame(newdata)
+class(low)
+head(low)
+
+```
+
+**Grouping Data (Weekadays & Weekends using factor variables)**
+```{r,echo=TRUE}
+week_days <- subset(low, weekdays !=3 & weekdays !=4)
+week_ends <- subset(low, weekdays ==3 | weekdays ==4)
+
+```
+
+```{r,echo=TRUE}
+clean1 <- na.omit(week_days)
+clean2 <- na.omit(week_ends)
+write.table(clean1, "weekdays.txt")
+write.table(clean1, "weekends.txt")
+names(clean1)
 
 
+```
 
-## What is the average daily activity pattern?
+**Weekdays Average**
+```{r,echo=TRUE}
+
+sil <- melt(clean1, id=c("interval","weekdays"), measures.vars=clean1$steps)
+gol <- dcast(sil, interval ~ variable,sum)
+
+sel <- as.numeric(gol$steps)/39
+sel
+```
 
 
+**Weekends Average**
+```{r,echo=TRUE}
 
-## Imputing missing values
+si <- melt(clean2, id=c("interval","weekdays"), measures.vars=clean2$steps)
+go <- dcast(si, interval ~ variable,sum)
 
+se <- as.numeric(go$steps)/14
+se
+```
 
+**Plot**
+```{r,echo=TRUE}
+par(mfrow=c(2,1))
+plot(gol$interval, sel, type="l", xlab="interval", ylab="steps", main="Weekdays", col="blue")
+plot(go$interval, se, type="l", xlab="interval", ylab="steps", main="Weekends", col="red")
 
-## Are there differences in activity patterns between weekdays and weekends?
+```
+
+<h3>The graph of Weekends is different from Weekdays.There are many high values in weekends graph compared to weekdays</h3>
